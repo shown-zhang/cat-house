@@ -5,7 +5,7 @@
             "name": "GDB Debug",
             "type": "gdb",
             "request": "launch",
-            "target": "${workspaceFolder}\\bin\\app.exe",
+            "target": "${workspaceFolder}\\bin\\cat-house.exe",
             "cwd": "${workspaceFolder}",
             "gdbpath": "C:/msys64/ucrt64/bin/gdb.exe",
             "preLaunchTask": "cmake-build"

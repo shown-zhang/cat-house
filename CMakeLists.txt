@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.29)
-project(cat-house C)
+project(cat-house C CXX)  # CXX 供 Dear ImGui 使用
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # 导出编译命令，供 clangd 使用
 
-# 调试信息由 CMAKE_BUILD_TYPE=Debug 自动带上，这里只统一警告级别
-add_compile_options(-Wall -Wextra)
+# 调试信息由 CMAKE_BUILD_TYPE=Debug 自动带上；警告选项只加在本项目代码上，
+# 避免第三方源码的警告淹没输出
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
