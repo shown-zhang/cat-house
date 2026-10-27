@@ -1,26 +1,24 @@
 cmake_minimum_required(VERSION 3.29)
-project(relationship C)
+project(cat-house C)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # 新增编译命令导出
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # 导出编译命令，供 clangd 使用
 
-# 增加调试信息
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
+# 调试信息由 CMAKE_BUILD_TYPE=Debug 自动带上，这里只统一警告级别
+add_compile_options(-Wall -Wextra)
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# 添加包含目录
+# 项目自身头文件目录
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
 )
 
-# 产物目录：在根目录统一设置，所有子目录都会继承
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+# 产物目录：静态库进 lib，可执行程序进 bin
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
-add_subdirectory(src relationship)
-add_subdirectory(test relationship-test)
-
-
-
+add_subdirectory(third-lib)   # 第三方预编译库
+add_subdirectory(src)         # 游戏主程序
+add_subdirectory(test)        # 单元测试入口
