@@ -1,0 +1,8 @@
+CompileFlags:
+  CompilationDatabase: build
+  Add:
+    - -std=c17
+    - -Wall
+    - -g
+    - --target=x86_64-w64-mingw32
+    - --gcc-toolchain=C:/msys64/ucrt64

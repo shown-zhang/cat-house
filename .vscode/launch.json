@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "GDB Debug",
+            "type": "gdb",
+            "request": "launch",
+            "target": "${workspaceFolder}\\bin\\app.exe",
+            "cwd": "${workspaceFolder}",
+            "gdbpath": "C:/msys64/ucrt64/bin/gdb.exe",
+            "preLaunchTask": "cmake-build"
+        }
+    ]
+}
