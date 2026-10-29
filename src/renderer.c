@@ -1,6 +1,8 @@
 #include "renderer.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <glad/glad.h>
 
@@ -146,30 +148,194 @@ void renderer_begin(Renderer *renderer, const mat4 view, const mat4 proj,
     glUniform1i(renderer->u_texture, 0);
 }
 
-void renderer_draw_model(Renderer *renderer, const Model *model, const vec3 tint)
+static uint32_t upload_texture(const ModelTexture *texture)
+{
+    if (!texture || !texture->pixels || texture->width <= 0 || texture->height <= 0) {
+        return 0;
+    }
+
+    GLuint id = 0;
+    glGenTextures(1, &id);
+    glBindTexture(GL_TEXTURE_2D, id);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texture->width, texture->height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, texture->pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return id;
+}
+
+int renderer_upload_model(Renderer *renderer, const Model *model, GpuModel *out)
+{
+    (void)renderer;
+
+    if (!model || !out) {
+        return -1;
+    }
+    memset(out, 0, sizeof(*out));
+
+    out->center[0] = model->center[0];
+    out->center[1] = model->center[1];
+    out->center[2] = model->center[2];
+    out->radius = model->radius;
+
+    /* 贴图：每个 CPU 贴图上传一次，图元按下标引用 */
+    if (model->texture_count > 0) {
+        out->textures = calloc(model->texture_count, sizeof(uint32_t));
+        if (!out->textures) {
+            return -1;
+        }
+        for (size_t i = 0; i < model->texture_count; ++i) {
+            out->textures[i] = upload_texture(&model->textures[i]);
+            out->texture_count = i + 1;
+        }
+    }
+
+    /* 图元：顶点 / 索引上传到 VBO / EBO，顶点布局与 ModelVertex 一致 */
+    if (model->primitive_count > 0) {
+        out->primitives = calloc(model->primitive_count, sizeof(GpuPrimitive));
+        if (!out->primitives) {
+            renderer_destroy_model(renderer, out);
+            return -1;
+        }
+
+        for (size_t i = 0; i < model->primitive_count; ++i) {
+            const ModelPrimitive *src = &model->primitives[i];
+            GpuPrimitive *dst = &out->primitives[i];
+            out->primitive_count = i + 1;
+
+            dst->index_count = src->index_count;
+            dst->texture = src->texture;
+            memcpy(dst->base_color, src->base_color, sizeof(dst->base_color));
+
+            if (src->vertex_count == 0 || src->index_count == 0 ||
+                !src->vertices || !src->indices) {
+                continue;
+            }
+
+            glGenVertexArrays(1, &dst->vao);
+            glGenBuffers(1, &dst->vbo);
+            glGenBuffers(1, &dst->ebo);
+
+            glBindVertexArray(dst->vao);
+
+            glBindBuffer(GL_ARRAY_BUFFER, dst->vbo);
+            glBufferData(GL_ARRAY_BUFFER,
+                         (GLsizeiptr)(src->vertex_count * sizeof(ModelVertex)),
+                         src->vertices, GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, dst->ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                         (GLsizeiptr)(src->index_count * sizeof(uint32_t)),
+                         src->indices, GL_STATIC_DRAW);
+
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(ModelVertex),
+                                  (const void *)offsetof(ModelVertex, position));
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(ModelVertex),
+                                  (const void *)offsetof(ModelVertex, normal));
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(ModelVertex),
+                                  (const void *)offsetof(ModelVertex, uv));
+
+            glBindVertexArray(0);
+        }
+    }
+
+    /* 绘制项：节点世界矩阵 + 图元下标 */
+    if (model->item_count > 0) {
+        out->items = calloc(model->item_count, sizeof(GpuDrawItem));
+        if (!out->items) {
+            renderer_destroy_model(renderer, out);
+            return -1;
+        }
+        for (size_t i = 0; i < model->item_count; ++i) {
+            memcpy(out->items[i].transform, model->items[i].transform,
+                   sizeof(out->items[i].transform));
+            out->items[i].primitive = model->items[i].primitive;
+        }
+        out->item_count = model->item_count;
+    }
+
+    return 0;
+}
+
+void renderer_destroy_model(Renderer *renderer, GpuModel *model)
+{
+    (void)renderer;
+
+    if (!model) {
+        return;
+    }
+
+    for (size_t i = 0; i < model->primitive_count; ++i) {
+        GpuPrimitive *primitive = &model->primitives[i];
+        if (primitive->ebo) {
+            glDeleteBuffers(1, &primitive->ebo);
+        }
+        if (primitive->vbo) {
+            glDeleteBuffers(1, &primitive->vbo);
+        }
+        if (primitive->vao) {
+            glDeleteVertexArrays(1, &primitive->vao);
+        }
+    }
+    for (size_t i = 0; i < model->texture_count; ++i) {
+        if (model->textures[i]) {
+            glDeleteTextures(1, &model->textures[i]);
+        }
+    }
+
+    free(model->primitives);
+    free(model->textures);
+    free(model->items);
+    memset(model, 0, sizeof(*model));
+}
+
+void renderer_draw_model(Renderer *renderer, const GpuModel *model, const vec3 tint)
 {
     glUniform3fv(renderer->u_tint, 1, tint);
 
     for (size_t i = 0; i < model->item_count; ++i) {
-        const ModelDrawItem *item = &model->items[i];
-        const ModelPrimitive *primitive = &model->primitives[item->primitive];
-        if (primitive->index_count == 0) {
+        const GpuDrawItem *item = &model->items[i];
+        if (item->primitive >= model->primitive_count) {
             continue;
         }
 
+        const GpuPrimitive *primitive = &model->primitives[item->primitive];
+        if (primitive->index_count == 0 || !primitive->vao) {
+            continue;
+        }
+
+        mat4 transform;
+        memcpy(transform, item->transform, sizeof(transform));
+
         mat4 inverse;
         mat3 normal_matrix;
-        glm_mat4_inv(item->transform, inverse);
+        glm_mat4_inv(transform, inverse);
         glm_mat4_pick3(inverse, normal_matrix);
         glm_mat3_transpose(normal_matrix);
 
-        glUniformMatrix4fv(renderer->u_model, 1, GL_FALSE,
-                           (const GLfloat *)item->transform);
+        uint32_t texture = 0;
+        if (primitive->texture >= 0 &&
+            (size_t)primitive->texture < model->texture_count) {
+            texture = model->textures[primitive->texture];
+        }
+
+        glUniformMatrix4fv(renderer->u_model, 1, GL_FALSE, (const GLfloat *)transform);
         glUniformMatrix3fv(renderer->u_normal_matrix, 1, GL_FALSE,
                            (const GLfloat *)normal_matrix);
         glUniform4fv(renderer->u_base_color, 1, primitive->base_color);
-        glUniform1i(renderer->u_has_texture, primitive->texture ? 1 : 0);
-        glBindTexture(GL_TEXTURE_2D, primitive->texture);
+        glUniform1i(renderer->u_has_texture, texture ? 1 : 0);
+        glBindTexture(GL_TEXTURE_2D, texture);
 
         glBindVertexArray(primitive->vao);
         glDrawElements(GL_TRIANGLES, (GLsizei)primitive->index_count,
