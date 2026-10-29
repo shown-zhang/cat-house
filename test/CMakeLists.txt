@@ -14,7 +14,4 @@ target_link_libraries(cat-house-test PRIVATE
     SDL2::SDL2
     glad
     cglm
-    cgltf
-    stb
-    cjson
 )

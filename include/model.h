@@ -5,6 +5,10 @@
 #include <stdint.h>
 #include <cglm/cglm.h>
 
+/* 模型库契约：由外部模型库项目实现（glb 解析 + 贴图烘焙）。
+ * 本项目只调用 model_load 拿到 Model，再交给 renderer 绘制。
+ * 加载时需已创建 OpenGL 上下文（图元句柄直接上传 GPU）。 */
+
 /* 一个可绘制的图元：顶点数据已上传 GPU，一期不做蒙皮 */
 typedef struct {
     uint32_t vao;
