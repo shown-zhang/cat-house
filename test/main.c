@@ -2,7 +2,9 @@
 #include <string.h>
 
 #include "CuTest.h"
+#include "appearance.h"
 #include "gene_lib.h"
+#include "texbake.h"
 
 /* 基因生成：连续生成不应失败 */
 static void test_generate(CuTest *tc)
@@ -29,6 +31,27 @@ static void test_describe(CuTest *tc)
     CuAssertTrue(tc, strlen(buffer) > 0);
 }
 
+/* 表型 → 烘焙指令：图层数量与尺寸必须落在烘焙库允许范围内 */
+static void test_appearance(CuTest *tc)
+{
+    gene_lib_seed(99u);
+
+    for (int i = 0; i < 32; ++i) {
+        GeneLibGene gene;
+        CuAssertIntEquals(tc, GENE_LIB_OK, gene_lib_generate(&gene));
+
+        GeneLibPhenotype phenotype;
+        CuAssertIntEquals(tc, GENE_LIB_OK, gene_lib_phenotype(&gene, &phenotype));
+
+        TexbakePattern pattern;
+        appearance_build_pattern(&phenotype, &pattern);
+
+        CuAssertTrue(tc, pattern.layer_count >= 0);
+        CuAssertTrue(tc, pattern.layer_count <= TEXBAKE_MAX_LAYERS);
+        CuAssertTrue(tc, pattern.bake_size > 0);
+    }
+}
+
 int main(void)
 {
     CuSuite *suite = CuSuiteNew();
@@ -36,6 +59,7 @@ int main(void)
 
     SUITE_ADD_TEST(suite, test_generate);
     SUITE_ADD_TEST(suite, test_describe);
+    SUITE_ADD_TEST(suite, test_appearance);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, summary);

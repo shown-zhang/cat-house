@@ -10,7 +10,10 @@ target_compile_options(cat-house-test PRIVATE -Wall -Wextra)
 
 target_link_libraries(cat-house-test PRIVATE
     gene_lib
+    model_making
     relationship
+    cgltf
+    stb
     SDL2::SDL2
     glad
     cglm

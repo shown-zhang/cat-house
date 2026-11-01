@@ -5,3 +5,6 @@ build/
 .trae
 third-lib
 .screenshots
+
+# 运行时烘焙产物
+cat_baked.glb
