@@ -60,7 +60,12 @@ static int rebuild_cat(Renderer *renderer, GpuModel *gpu, int *loaded,
     TexbakePattern pattern;
     appearance_build_pattern(&phenotype, &pattern);
 
-    const int status = texbake_bake_glb(SOURCE_GLB, BAKED_GLB, NULL, &pattern);
+    /* 表面烘焙：3D 图元按对象空间求值，跨 UV 岛连续 */
+    TexbakeSurfaceOptions options;
+    texbake_surface_options_init(&options);
+
+    const int status = texbake_bake_glb_surface(SOURCE_GLB, BAKED_GLB, NULL,
+                                                &pattern, &options);
     if (status != TEXBAKE_OK) {
         fprintf(stderr, "贴图烘焙失败：%d\n", status);
         return -1;

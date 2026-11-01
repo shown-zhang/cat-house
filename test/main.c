@@ -49,6 +49,11 @@ static void test_appearance(CuTest *tc)
         CuAssertTrue(tc, pattern.layer_count >= 0);
         CuAssertTrue(tc, pattern.layer_count <= TEXBAKE_MAX_LAYERS);
         CuAssertTrue(tc, pattern.bake_size > 0);
+
+        /* 表面烘焙只接受 3D 图元 */
+        for (int l = 0; l < pattern.layer_count; ++l) {
+            CuAssertIntEquals(tc, 1, pattern.layers[l].kind >= TEXBAKE_LAYER_BLOB3D);
+        }
     }
 }
 
