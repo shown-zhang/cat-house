@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* 模型库契约：由外部模型库项目实现（glb 解析 + 表型烘焙）。
+/* 模型的 CPU 数据契约，由本项目 src/model.c 实现（cgltf + stb_image）。
  * 只产出 CPU 数据，不依赖任何图形 API；上传 GPU 由本项目 renderer 完成。
  * 顶点为位置 / 法线 / UV，与 glTF 一期的属性一致。 */
 
@@ -47,8 +47,9 @@ typedef struct {
     float radius;          /* 包围球半径 */
 } Model;
 
-/* 加载 glTF / GLB 并按表型烘焙贴图。成功返回 0，失败返回 -1。
- * 纯 CPU 实现，不需要 OpenGL 上下文。 */
+/* 加载 glTF / GLB（含节点世界矩阵、绘制项、内嵌贴图）到 Model。
+ * 贴图烘焙在加载之前由 model_making 完成，这里不做烘焙。
+ * 纯 CPU 实现，不需要 OpenGL 上下文。成功返回 0，失败返回 -1。 */
 int model_load(Model *model, const char *path);
 void model_free(Model *model);
 

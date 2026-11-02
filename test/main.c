@@ -3,6 +3,7 @@
 
 #include "CuTest.h"
 #include "appearance.h"
+#include "cat_asset.h"
 #include "gene_lib.h"
 #include "texbake.h"
 
@@ -57,6 +58,32 @@ static void test_appearance(CuTest *tc)
     }
 }
 
+/* 资产选择：只有偏离默认值的性状参与命名，且耳形优先保留 */
+static void test_asset(CuTest *tc)
+{
+    GeneLibPhenotype phenotype;
+    memset(&phenotype, 0, sizeof(phenotype));
+
+    CatAssetTrait traits[CAT_ASSET_MAX_TRAITS];
+
+    /* 全默认的表型：没有档案片段，直接用默认资产 */
+    CuAssertIntEquals(tc, 0, cat_asset_traits(&phenotype, traits, CAT_ASSET_MAX_TRAITS));
+
+    char path[256];
+    cat_asset_select(&phenotype, "assets/cat.glb", path, sizeof(path));
+    CuAssertStrEquals(tc, "assets/cat.glb", path);
+
+    phenotype.ear_shape = GENE_LIB_EAR_FOLD;
+    phenotype.leg_length = GENE_LIB_LEG_SHORT;
+    phenotype.tail_form = GENE_LIB_TAIL_BOB;
+
+    const int count = cat_asset_traits(&phenotype, traits, CAT_ASSET_MAX_TRAITS);
+    CuAssertIntEquals(tc, 3, count);
+    CuAssertStrEquals(tc, "ear-fold", traits[0].tag);
+    CuAssertStrEquals(tc, "leg-short", traits[1].tag);
+    CuAssertStrEquals(tc, "tail-bob", traits[2].tag);
+}
+
 int main(void)
 {
     CuSuite *suite = CuSuiteNew();
@@ -65,6 +92,7 @@ int main(void)
     SUITE_ADD_TEST(suite, test_generate);
     SUITE_ADD_TEST(suite, test_describe);
     SUITE_ADD_TEST(suite, test_appearance);
+    SUITE_ADD_TEST(suite, test_asset);
 
     CuSuiteRun(suite);
     CuSuiteSummary(suite, summary);
