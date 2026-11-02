@@ -7,6 +7,7 @@ target_compile_options(cat-house PRIVATE -Wall -Wextra)
 target_link_libraries(cat-house PRIVATE
     gene_lib        # 基因生成 / 表型
     model_making    # 表型 → 贴图烘焙
+    fur_render      # 真实发丝毛发渲染
     relationship    # 族谱（后续接入）
     cgltf           # glTF / GLB 解析
     stb             # 图像解码 + 简易字体

@@ -16,3 +16,4 @@ add_subdirectory(stb)           # 图像解码 + 简易字体
 add_subdirectory(gene-lib)      # 基因生成与表达
 add_subdirectory(relationship)  # 族谱
 add_subdirectory(model-making)  # 表型 → 贴图烘焙（输出新 glb）
+add_subdirectory(fur-render)    # 真实发丝毛发渲染（GL 侧）
